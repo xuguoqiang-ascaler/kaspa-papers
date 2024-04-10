@@ -149,3 +149,164 @@ is demonstrated in Figure 1.
 接下来的这些术语将被广泛的用在整篇论文中。一个由区块构成的有向无环图用$G=(C,E)$，$C$用来表示区块，$E$用来表示当前区块对父区块的引用。我们通常记作$B \in G$而不是$B \in C$。$past(B, G) \subseteq C$表示从$B可以遍历到的区块的集合（不好含$B$）。$future(B,G) \subseteq C$表示可以遍历到$B$的区块的集合（不好含$B$）。这些区块是已经被验证的在区块$B$之前和之后创建的。在有向无环图中，边从现在指向过去，从当前的新创建的区块指向过去的它引用的区块。$anticone(B,G)$表示在$past(B,G)$和$future(B,G)$之外的区块的集合（不包含$B$）。这个集合表示无法引用到$B$的集合（无论直接引用还是间接前驱引用）和被$B$引用的集合（无论是直接还是间接后继引用）。$tips(G)$表示入度为0的区块（通常，这些事最新被创建的区块）。这些术语在图1中被阐述。
 
 ![avatar](./images/Figure1.PNG)
+
+<!--
+2.2 The DAG mining protocol
+Rather than extending a single chain, a miner in PHANTOM
+references in its new block all blocks in tips(G), where G is the
+DAG that the miner observes locally at the time when the new
+block is created. Additionally, the miner should broadcast its new
+block as fast as possible. These two rules together constitute the
+DAG mining protocol in PHANTOM.
+-->
+
+### 2.2 有向无环图的挖矿协议
+
+G是矿工在创建新的区块的时候观察到的本地的有向无环图。PHANTOM的矿工引用所有的$tips(G)$中的区块，而不是只延长一条链。另外，矿工应该将新的区块尽可能快的广播出去。这两条规则一起构成了PHANTOM的有向无环图的挖矿协议。
+
+<!--
+2.3 The DAG ordering protocol
+The aforementioned DAG mining protocol implies in particular that
+even when two blocks contain conflicting transactions, both blocks
+are incorporated into the blockDAG and referenced by all (honest)
+miners. The core challenge is then how to recover the consistency of
+the blockDAG. This is done in our framework by ordering all blocks
+– and by extension, all transactions – and accepting transactions one
+by one, eliminating individual transactions that are inconsistent
+with those approved before them. PHANTOM achieves consensus
+on the order of blocks, and this guarantees agreement on the set of
+accepted transactions as well.
+-->
+
+### 2.3 有向无环图的排序协议
+
+之前提高的有向无环图的挖矿协议中特别关键的一点是如果两个区块中包含有冲突的交易，那么这两个区块参与了区块有向无环图的构造并且被所有的（诚实）的节点引用。关键的挑战在于如何恢复区块有向图的一致性。在我们的框架中我们的做法是排序所有的区块，本质上更进一步来说，排序所有的交易，按顺序一笔一笔的验证交易，删除那些与已验证的交易有冲突的交易。PHANTOM协议在区块的顺序上实现了共识，这一点就保证了所有的节点在已验证的交易这一结果上取得了一致。
+
+<!--
+Essentially, Bitcoin can be seen as an ordering protocol as well,
+according to which transactions embedded in the longest chain of
+blocks precede those off the longest chain. Unfortunately, Bitcoin’s
+protocol is known to be secure only under slow block rates (see
+Section 4).
+-->
+
+本质上来说，比特币也可以被看作排序协议，将最长链上的区块里的交易排序优先排序，然后才是最长链之外的区块中的。不幸的是，比特币协议只有在创建区块的速度很低的条件下才是安全的。
+
+<!--
+The ordering rule of PHANTOM has two stages: First, we divide
+the blocks to Blues and Reds; the Blue set represents blocks that
+appear to have been mined by cooperating nodes, whereas blocks in
+the Red set are outliers that were most likely mined by malicious or
+strategic nodes. Then, we order the DAG in a way that favours blue
+blocks and penalizes red ones. The latter step is rather immediate,
+and the novelty of PHANTOM lies mainly in the first colouring
+procedure
+-->
+
+PHANTOM排序的规则分为两个阶段。第一个阶段，我们将区块分蓝色和红色两类。蓝色的区块被看作是由守规矩的节点创建的，红色的区块被看作是由恶意的有心机的节点创建的。然后我们将所有的节点排序，在这个过程中，我们奖励蓝色的区块，惩罚红色的区块。第二步的操作显而易见，PHANTOM协议的精彩之处在于第一步的着色过程。
+
+<!--
+2.3.1 The intuition behind PHANTOM. Just like Bitcoin,
+PHANTOM relies on the ability of honest nodes to communicate
+to their peers recent blocks in a timely manner, and on the
+assumption that honest nodes possess more than 50% of the
+hashrate. The block rate in Bitcoin is suppressed so as to ensure
+block creation is slower than the time it takes to communicate
+them. In PHANTOM, on the other hand, we notice that the set of
+honest blocks can be recognized even when the block rate is high
+and many forks appear spontaneously: Due to the communication
+and cooperation of honest miners, we should expect to see in the
+DAG a “well-connected” cluster of blocks.
+-->
+
+#### 2.3.1 PHANTOM协议背后的直观理解。
+像比特币一样，PHANTOM协议依赖于诚实的节点相互通信，及时的发送最近产生的区块。并且它也基于诚实的节点掌握50%以上的哈希率。比特币的出块速度被压低是为了确保网络创建一个区块的时间要大于将区块广播到整个网络的时间。在PHANTOM协议中，与比特币不同的是，我们注意到诚实的区块可以在出块速度很高，同时产生许多分叉的情况下被识别。由于诚实节点的相互通信和协作，我们应该在有向无环图中看到一个区块之间良好连接的区块的集族。
+
+<!--
+Indeed, let D be an upper bound on the network’s propagation
+delay. If block B was mined by an honest miner at time t , then any
+block published before time t −D necessarily arrived at its miner
+before time t , and is therefore included in past (B). Similarly, the
+honest miner will publish B immediately, and so B will be included
+in the past set of any block mined after time t +D. As a result, the set
+of honest blocks in B’s anticone is typically small, and consists only
+of blocks created in the interval [t −D,t +D]. The proof-of-work
+mechanism guarantees that the number of blocks created in an
+interval of length 2 ·D is typically below some k >0.
+In short, the set of blocks created by honest nodes
+is well-connected. The following definition captures
+“well-connectedness”:
+-->
+
+我们用$D$表示网络中区块传输延迟的上限。如果区块$B$被一个诚实的节点在时间$t$创建，那么任何在$t-D$这个时间点之前创建的区块都会在时间$t$之前到达这个诚实的节点，所有的这些区块都在$past(B)$这个集合中。同理，由于这个诚实的节点将会在第一时间广播这个新创建的区块$B$，所以这个区块被所有$t+D$后创建的区块放入各自的$past$的集合中。结果就是诚实的区块$B$的$anticone$的集合将非常小，只包含那些在$t-D$到$t+D$时间间隔中创建的区块。工作量证明的机制将确保在时间间隔$2*D$中创建的区块的数目小于参数$k(k>0)$。简单来说，由诚实的节点创建的区块都是良好连接的区块。下面的这个定义抓住了良好连接这一概念的实质。
+
+*定义 1*. 给定一个有向无环图 $G =(C,E)$, 一个子集 $S \subseteq C$ 被称作$k$集簇（
+k-cluster）, 如果 $\forall B \in S:  |anticone (B) \cap S | \le k$。
+
+<!--
+Attacker nodes may deviate arbitrarily from the mining rules,
+have large anticones, and even artificially increase the anticone
+of honest blocks. Nonetheless, since honest miners possess more
+proof-of-work power, it is usually impossible for malicious miners
+to create a well-connected set of blocks that is larger than that
+created by honest nodes. PHANTOM utilizes this fact and selects the
+largest well-connected set within the DAG, by solving the following
+optimization problem:
+-->
+
+恶意攻击的节点可以以任何方式不遵守挖矿规则，产生更大的$anticone$，甚至故意的增大诚实的区块的$anticone$。然而，由于诚实的节点拥有更多的算力，通常来说，恶意的节点没有可能创建一个良好连接的区块的集合并使得这个集合比诚实的节点创建的更大。PHANTOM协议利用了这个事实，选择有向无环图中最大的那个良好连接的区块的集合。这个选择的过程是解决下面的这个优化问题。
+
+<!--
+Maximum k-cluster SubDAG (MCSk )
+Input: DAG G =(C,E)
+Output: A subset S∗ ⊂ C of maximum size, s.t.
+|anticone (B)∩S∗| ≤k for all B ∈S∗
+-->
+
+*最大化$k$集簇的子图*
+
+输入：有向无环图$G=(C,E)$
+
+输出：一个最大的子集$S^* \subset C$使得$\forall B \in S^* \quad |anticone(B) \cap S^*| \lt k$
+
+<!--
+In this formulation, the parameter k is predetermined; see
+Section 4 for more details. An example of a maximum k-cluster
+appears in Figure 
+-->
+
+在这个公式中，参数$k$是预先定义的。在第4节中有更多的细节。图2中有最大k集簇的例子。
+
+![avatar](./images/Figure2.PNG)
+
+<!--
+2.3.2 The PHANTOM protocol. Following the above intuition, the
+ordering protocol of PHANTOM comprises the following two steps:
+(1) Given a block G, solve MCSk (G); let’s refer to its output as
+the Blue set and to its complement set as the Red one.
+(2) Determine the order between Blue blocks according to some
+topological sort. Then, for any Blue block B, add to the order
+just before B all of the Red blocks in past (B)that weren’t
+added to the order yet; these Red blocks too should be added
+in a topological manner.3
+-->
+
+#### 2.3.2 PHANTOM协议
+
+根据上面提供的直观理解， PHANTOM的排序协议包含了一下两步：
+
+1. 给定一个有向无环图$G$，找到$G$的最大的k聚簇。在最大k集簇里的区块被标记为蓝色，其他的区块被标记为红色。
+
+2. 根据一种拓扑排序确定蓝色区块的顺序。然后，对于任意的蓝色区块$B$，将$past(B)$中的还未添加到顺序中的红色区块添加到区块$B$的前面，也就是说如果有这样的红色区块，那么这些红色区块紧挨在一起并且和$B$之间不存在蓝色区块。这些红色区块也要按照一种拓扑排序的顺序添加。
+
+<!--
+An example of the output of the PHANTOM procedure on
+the small blockDAG from Figure 2 is: (A,D,C,G,B,F ,I,E,J,H,K ).
+Unfortunately, the Maximum k-cluster SubDAG problem is NP hard
+(see problem [GT26] in [10]), and PHANTOM is therefore of less
+practical use for an ever-growing blockDAG. We thus introduce a
+greedy algorithm that is more suitable for implementation. We call
+this greedy variant GHOSTDAG
+-->
+
+在图2中那个小规模的区块有向无环图中，PHANTOM协议的一种可能的输出是$(A,D,C,G,B,F,I,E,J,H,K)$。不幸的是找到最大的集簇的子图是一个NP难的问题。因此PHANTOM协议在一个不断增长的区块有向图中的实际用处并不大。因此我们介绍一种更好实现的贪心算法，我们把这个贪心的算法叫做GHOSTDAG。
